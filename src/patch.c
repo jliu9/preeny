@@ -6,6 +6,10 @@
 #include <errno.h>
 #include "logging.h"
 
+/**
+ * NOTE: need to install libini-config-dev
+ **/
+
 struct collection_item *preeny_patch_load(char *conf_file)
 {
 	struct collection_item *diff_conf_errors = NULL;
