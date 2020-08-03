@@ -3,10 +3,26 @@
 #include <dirent.h>
 #include <dlfcn.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include "logging.h"
+
+#ifndef KFS_ORIG
+#include "fsapi.h"
+#endif
+
+#define FS_SHM_KEY_BASE 20190301
+#define FS_MAX_NUM_WORKER 20
+
+const static char *fsp_dir_prefix = "fsp";
+// 3 == strlen(fsp_dir_prefix)
+#define TO_NEW_PATH(path) (path + 3)
+
+const static char *FSP_ENV_VAR_KEY_LIST = "FSP_KEY_LISTS";
+static key_t shm_keys[FS_MAX_NUM_WORKER];
+static int g_num_workers = 0;
 
 /**
  * NOTE: it's better to use ltrace to see what libc is doing for this wrapper
@@ -27,6 +43,12 @@
  ssize_t write(int fd, const void *buf, size_t count);
  ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset);
  **/
+
+static void init_shm_keys(char *keys);
+static void clean_exit() { exit(fs_exit()); };
+static inline int check_if_path_fsp_data(const char *path) {
+  return strncmp(path, fsp_dir_prefix, 3) == 0;
+}
 
 //
 // originals
@@ -58,115 +80,199 @@ __attribute__((constructor)) void preeny_fsops_orig() {
   original_pread = dlsym(RTLD_NEXT, "pread");
   original_write = dlsym(RTLD_NEXT, "write");
   original_pwrite = dlsym(RTLD_NEXT, "pwrite");
+  char *fsp_num_workers_str = getenv(FSP_ENV_VAR_KEY_LIST);
+  if (fsp_num_workers_str == NULL) {
+    preeny_error(
+        "cannot find environment variable: %s. Will use default single key\n",
+        FSP_ENV_VAR_KEY_LIST);
+    fsp_num_workers_str = "1";
+  }
+  init_shm_keys(fsp_num_workers_str);
+  preeny_info("g_num_workers:%d\n", g_num_workers);
+
+  int rt = fs_init_multi(g_num_workers, shm_keys);
+  if (rt < 0) {
+    preeny_error("cannot connect to FS\n");
+  }
 }
 
+__attribute__((destructor)) void preeny_fsops_shutdown() { clean_exit(); }
+
 int stat(const char *pathname, struct stat *statbuf) {
+  preeny_debug("stat(%s)\n", pathname);
 #ifdef KFS_ORIG
   return original_stat(pathname, statbuf);
 #else
-  return 0;
+  int rt;
+  if (check_if_path_fsp_data(pathname)) {
+    rt = fs_stat(TO_NEW_PATH(pathname), statbuf);
+  } else {
+    rt = original_stat(pathname, statbuf);
+  }
+  return rt;
 #endif
 }
 
 int open(const char *pathname, int flags, mode_t mode) {
+  preeny_debug("open(pathname%s)\n", pathname);
 #ifdef KFS_ORIG
   return original_open(pathname, flags, mode);
 #else
-  return 0;
+  int fd;
+  if (check_if_path_fsp_data(pathname)) {
+    fd = fs_open(TO_NEW_PATH(pathname), flags, mode);
+  } else {
+    preeny_info("original_open(%s)\n", pathname);
+    fd = original_open(pathname, flags, mode);
+  }
+  return fd;
 #endif
 }
 
 int close(int fd) {
+  preeny_debug("close\n");
 #ifdef KFS_ORIG
   return original_close(fd);
 #else
-  return 0;
+  return fs_close(fd);
 #endif
 }
 int unlink(const char *pathname) {
+  preeny_debug("unlink\n");
 #ifdef KFS_ORIG
   return original_unlink(pathname);
 #else
-  return 0;
+  int rt;
+  if (check_if_path_fsp_data(pathname)) {
+    rt = fs_unlink(TO_NEW_PATH(pathname));
+  } else {
+    rt = unlink(pathname);
+  }
+  return rt;
 #endif
 }
 
 int rename(const char *oldpath, const char *newpath) {
+  preeny_debug("rename\n");
 #ifdef KFS_ORIG
   return original_rename(oldpath, newpath);
 #else
-  return 0;
+  int rt;
+  if (check_if_path_fsp_data(oldpath)) {
+    rt = fs_rename(TO_NEW_PATH(oldpath), TO_NEW_PATH(newpath));
+  } else {
+    rt = rename(oldpath, newpath);
+  }
+  return rt;
 #endif
 }
 
 int mkdir(const char *pathname, mode_t mode) {
+  preeny_debug("mkdir\n");
 #ifdef KFS_ORIG
   return original_mkdir(pathname, mode);
 #else
-  return 0;
+  int rt;
+  if (check_if_path_fsp_data(pathname)) {
+    rt = fs_mkdir(TO_NEW_PATH(pathname), mode);
+  } else {
+    rt = mkdir(pathname, mode);
+  }
+  return rt;
 #endif
 }
 
 int rmdir(const char *pathname) {
+  preeny_debug("rmdir\n");
 #ifdef KFS_ORIG
   return original_rmdir(pathname);
 #else
-  return 0;
+  int rt;
+  if (check_if_path_fsp_data(pathname)) {
+    rt = fs_rmdir(TO_NEW_PATH(pathname));
+  } else {
+    rt = original_rmdir(pathname);
+  }
+  return rt;
 #endif
 }
 
 DIR *opendir(const char *name) {
+  preeny_debug("opendir\n");
 #ifdef KFS_ORIG
   return original_opendir(name);
 #else
-  return 0;
+  if (check_if_path_fsp_data(name)) {
+    return (DIR *)(fs_opendir(TO_NEW_PATH(name)));
+  }
+  return NULL;
 #endif
 }
 
 int closedir(DIR *dirp) {
+  preeny_debug("closedir\n");
 #ifdef KFS_ORIG
   return original_closedir(dirp);
 #else
-  return 0;
+  return fs_closedir((struct CFS_DIR *)dirp);
 #endif
 }
 
 struct dirent *readdir(DIR *dirp) {
+  preeny_debug("readdir\n");
 #ifdef KFS_ORIG
   return original_readdir(dirp);
 #else
-  return 0;
+  return fs_readdir((struct CFS_DIR *)dirp);
 #endif
 }
 
 ssize_t read(int fd, void *buf, size_t count) {
+  preeny_debug("read\n");
 #ifdef KFS_ORIG
   return original_read(fd, buf, count);
 #else
-  return 0;
+  return original_read(fd, buf, count);
 #endif
 }
 
 ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
+  preeny_debug("pread\n");
 #ifdef KFS_ORIG
   return original_pread(fd, buf, count, offset);
 #else
-  return 0;
+  return original_pread(fd, buf, count, offset);
 #endif
 }
 
 ssize_t write(int fd, const void *buf, size_t count) {
+  preeny_debug("write\n");
 #ifdef KFS_ORIG
   return original_write(fd, buf, count);
 #else
-  return 0;
+  return original_write(fd, buf, count);
 #endif
 }
 
 ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
+  preeny_debug("pwrite\n");
 #ifdef KFS_ORIG
   return original_pwrite(fd, buf, count, offset);
 #else
   return 0;
 #endif
+}
+
+static void init_shm_keys(char *keys) {
+  preeny_debug("init_shm_keys:%s\n", keys);
+  char *token = strtok(keys, ",");
+  key_t cur_key;
+  int num_workers = 0;
+  while (token != NULL) {
+    cur_key = atoi(token);
+    preeny_debug("cur_key:%d\n", cur_key);
+    shm_keys[num_workers++] = (FS_SHM_KEY_BASE) + cur_key;
+    token = strtok(NULL, ",");
+  }
+  g_num_workers = num_workers;
 }

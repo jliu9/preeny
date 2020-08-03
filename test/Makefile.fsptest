@@ -1,0 +1,9 @@
+.PHONY: all clean
+
+all: unlink1
+
+unlink1:
+	gcc -o unlink1 unlink1.c
+
+clean:
+	rm -f unlink1

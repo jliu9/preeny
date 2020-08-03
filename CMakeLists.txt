@@ -16,8 +16,37 @@ add_library(mallocwatch SHARED src/mallocwatch.c)
 target_link_libraries(mallocwatch common-preeny dl)
 
 # FSP
+set(CFS_ROOT_DIR "$ENV{HOME}/workspace/ApparateFS/cfs/")
+message("CFS_ROOT_DIR:${CFS_ROOT_DIR}")
+set(CFS_INC "${CFS_ROOT_DIR}/include")
+set(CFS_BUILD "${CFS_ROOT_DIR}/build")
+
+include_directories(${CFS_INC})
+message("CFS_INC:${CFS_INC}")
+link_directories(${CFS_BUILD})
+
+find_package(gflags REQUIRED)
+set(GFLAGS_INCLUDE_DIR /usr/lib/x86_64-linux-gnu)
+include_directories(${gflags_INCLUDE_DIR})
+
+execute_process(
+  COMMAND uname -r
+  COMMAND sed "s/-.*$//"
+  RESULT_VARIABLE tbb_kver_res
+  OUTPUT_VARIABLE tbb_kver_out
+  OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+if(NOT ${tbb_kver_res} EQUAL "0")
+  message(FATAL_ERROR "failed to get kernel version")
+endif()
+
+link_directories(
+  "${CFS_ROOT_DIR}/lib/tbb/build/linux_intel64_gcc_cc7_libc2.27_kernel${tbb_kver_out}_release"
+)
+
 add_library(fsp SHARED src/fsp.c)
-target_link_libraries(fsp common-preeny dl)
+#target_compile_definitions(fsp PRIVATE KFS_ORIG)
+target_link_libraries(fsp common-preeny dl cfs rt stdc++ tbb iberty)
 
 # Signals
 add_library(dealarm SHARED src/dealarm.c)
@@ -84,6 +113,8 @@ add_executable(test_realloc test/realloc.c)
 add_executable(test_sleep test/sleep.c)
 add_executable(test_sock test/sock.c)
 add_executable(test_uid test/uid.c)
+add_executable(test_unlink1 test/unlink1.c)
 
 # Scripts
 file(COPY ${CMAKE_SOURCE_DIR}/test/run_tests.sh DESTINATION ${CMAKE_BINARY_DIR})
+file(COPY ${CMAKE_SOURCE_DIR}/test/run_fsptest.sh DESTINATION ${CMAKE_BINARY_DIR})
