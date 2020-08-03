@@ -15,6 +15,10 @@ target_link_libraries(crazyrealloc common-preeny dl)
 add_library(mallocwatch SHARED src/mallocwatch.c)
 target_link_libraries(mallocwatch common-preeny dl)
 
+# FSP
+add_library(fsp SHARED src/fsp.c)
+target_link_libraries(fsp common-preeny dl)
+
 # Signals
 add_library(dealarm SHARED src/dealarm.c)
 target_link_libraries(dealarm common-preeny)
