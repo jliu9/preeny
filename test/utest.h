@@ -1,6 +1,7 @@
 #pragma once
 #include <stdio.h>
 
+#define FSP_MT_RETRY_ERROR_NUM (-101)
 
 #define CHECK_COND(val, cond)                                      \
   if (!(cond)) {                                                   \

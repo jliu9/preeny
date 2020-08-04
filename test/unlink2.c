@@ -22,7 +22,7 @@ extern char *g_fsp_test_root_dir;
 extern int g_pass;
 
 void test_unlink_1() {
-    // variables
+  // variables
   char *test_dir_name = "fsp/test_dir";
   char *test_f1_name = "fsp/test_dir/f1";
   char *test_f2_name = "fsp/test_dir/f2";
@@ -52,14 +52,13 @@ void test_unlink_1() {
   assert(g_pass);
 
   // move? wow
-  for(int i = 0; i < 2; i++) {
-  rt = stat(test_f1_name, &stbuf);
-  CHECK_ACTUAL_EXPECT_VALUE(statf1, rt, 0);
-  rt = stat(test_f2_name, &stbuf);
-  CHECK_ACTUAL_EXPECT_VALUE(statf2, rt, 0);
-  assert(g_pass);
+  for (int i = 0; i < 2; i++) {
+    rt = stat(test_f1_name, &stbuf);
+    CHECK_ACTUAL_EXPECT_VALUE(statf1, rt, 0);
+    rt = stat(test_f2_name, &stbuf);
+    CHECK_ACTUAL_EXPECT_VALUE(statf2, rt, 0);
+    assert(g_pass);
   }
-
 
   rt = unlink(test_f1_name);
   CHECK_ACTUAL_EXPECT_VALUE(unlinkf1, rt, 0);
@@ -92,7 +91,7 @@ void test_unlink_1() {
 
 int main() {
   if (walk_test_root_dir() != 0) {
-      return -1;
+    return -1;
   }
   print_sep_line();
   test_unlink_1();
