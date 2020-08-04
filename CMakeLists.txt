@@ -113,7 +113,9 @@ add_executable(test_realloc test/realloc.c)
 add_executable(test_sleep test/sleep.c)
 add_executable(test_sock test/sock.c)
 add_executable(test_uid test/uid.c)
-add_executable(test_unlink1 test/unlink1.c)
+set(FSP_TEST_COMMON_SRC test/fsptest_common.c test/utest.h)
+add_executable(test_unlink1 test/unlink1.c ${FSP_TEST_COMMON_SRC})
+add_executable(test_unlink2 test/unlink2.c ${FSP_TEST_COMMON_SRC})
 
 # Scripts
 file(COPY ${CMAKE_SOURCE_DIR}/test/run_tests.sh DESTINATION ${CMAKE_BINARY_DIR})

@@ -9,9 +9,7 @@
 #include <unistd.h>
 #include "logging.h"
 
-#ifndef KFS_ORIG
 #include "fsapi.h"
-#endif
 
 #define FS_SHM_KEY_BASE 20190301
 #define FS_MAX_NUM_WORKER 20
@@ -54,6 +52,7 @@ static inline int check_if_path_fsp_data(const char *path) {
 // originals
 //
 int (*original_stat)(const char *pathname, struct stat *statbuf);
+int (*original__xstat)(int ver, const char *path, struct stat *stat_buf);
 int (*original_open)(const char *pathname, int flags, mode_t mode);
 int (*original_close)(int fd);
 int (*original_unlink)(const char *pathname);
@@ -69,6 +68,7 @@ ssize_t (*original_write)(int fd, const void *buf, size_t count);
 ssize_t (*original_pwrite)(int fd, const void *buf, size_t count, off_t offset);
 __attribute__((constructor)) void preeny_fsops_orig() {
   original_stat = dlsym(RTLD_NEXT, "stat");
+  original__xstat = dlsym(RTLD_NEXT, "__xstat");
   original_open = dlsym(RTLD_NEXT, "open");
   original_close = dlsym(RTLD_NEXT, "close");
   original_unlink = dlsym(RTLD_NEXT, "unlink");
@@ -100,9 +100,6 @@ __attribute__((destructor)) void preeny_fsops_shutdown() { clean_exit(); }
 
 int stat(const char *pathname, struct stat *statbuf) {
   preeny_debug("stat(%s)\n", pathname);
-#ifdef KFS_ORIG
-  return original_stat(pathname, statbuf);
-#else
   int rt;
   if (check_if_path_fsp_data(pathname)) {
     rt = fs_stat(TO_NEW_PATH(pathname), statbuf);
@@ -110,14 +107,21 @@ int stat(const char *pathname, struct stat *statbuf) {
     rt = original_stat(pathname, statbuf);
   }
   return rt;
-#endif
+}
+
+int __xstat(int ver, const char *path, struct stat *statbuf) {
+  preeny_debug("__xstat(%s)\n", path);
+  int rt;
+  if (check_if_path_fsp_data(path)) {
+    rt = fs_stat(TO_NEW_PATH(path), statbuf);
+  } else {
+    rt = original__xstat(ver, path, statbuf);
+  }
+  return rt;
 }
 
 int open(const char *pathname, int flags, mode_t mode) {
-  preeny_debug("open(pathname%s)\n", pathname);
-#ifdef KFS_ORIG
-  return original_open(pathname, flags, mode);
-#else
+  preeny_debug("open(%s)\n", pathname);
   int fd;
   if (check_if_path_fsp_data(pathname)) {
     fd = fs_open(TO_NEW_PATH(pathname), flags, mode);
@@ -126,22 +130,14 @@ int open(const char *pathname, int flags, mode_t mode) {
     fd = original_open(pathname, flags, mode);
   }
   return fd;
-#endif
 }
 
 int close(int fd) {
   preeny_debug("close\n");
-#ifdef KFS_ORIG
-  return original_close(fd);
-#else
   return fs_close(fd);
-#endif
 }
 int unlink(const char *pathname) {
   preeny_debug("unlink\n");
-#ifdef KFS_ORIG
-  return original_unlink(pathname);
-#else
   int rt;
   if (check_if_path_fsp_data(pathname)) {
     rt = fs_unlink(TO_NEW_PATH(pathname));
@@ -149,14 +145,10 @@ int unlink(const char *pathname) {
     rt = unlink(pathname);
   }
   return rt;
-#endif
 }
 
 int rename(const char *oldpath, const char *newpath) {
   preeny_debug("rename\n");
-#ifdef KFS_ORIG
-  return original_rename(oldpath, newpath);
-#else
   int rt;
   if (check_if_path_fsp_data(oldpath)) {
     rt = fs_rename(TO_NEW_PATH(oldpath), TO_NEW_PATH(newpath));
@@ -164,14 +156,10 @@ int rename(const char *oldpath, const char *newpath) {
     rt = rename(oldpath, newpath);
   }
   return rt;
-#endif
 }
 
 int mkdir(const char *pathname, mode_t mode) {
   preeny_debug("mkdir\n");
-#ifdef KFS_ORIG
-  return original_mkdir(pathname, mode);
-#else
   int rt;
   if (check_if_path_fsp_data(pathname)) {
     rt = fs_mkdir(TO_NEW_PATH(pathname), mode);
@@ -179,14 +167,10 @@ int mkdir(const char *pathname, mode_t mode) {
     rt = mkdir(pathname, mode);
   }
   return rt;
-#endif
 }
 
 int rmdir(const char *pathname) {
   preeny_debug("rmdir\n");
-#ifdef KFS_ORIG
-  return original_rmdir(pathname);
-#else
   int rt;
   if (check_if_path_fsp_data(pathname)) {
     rt = fs_rmdir(TO_NEW_PATH(pathname));
@@ -194,73 +178,43 @@ int rmdir(const char *pathname) {
     rt = original_rmdir(pathname);
   }
   return rt;
-#endif
 }
 
 DIR *opendir(const char *name) {
   preeny_debug("opendir\n");
-#ifdef KFS_ORIG
-  return original_opendir(name);
-#else
   if (check_if_path_fsp_data(name)) {
     return (DIR *)(fs_opendir(TO_NEW_PATH(name)));
   }
   return NULL;
-#endif
 }
 
 int closedir(DIR *dirp) {
   preeny_debug("closedir\n");
-#ifdef KFS_ORIG
-  return original_closedir(dirp);
-#else
   return fs_closedir((struct CFS_DIR *)dirp);
-#endif
 }
 
 struct dirent *readdir(DIR *dirp) {
   preeny_debug("readdir\n");
-#ifdef KFS_ORIG
-  return original_readdir(dirp);
-#else
   return fs_readdir((struct CFS_DIR *)dirp);
-#endif
 }
 
 ssize_t read(int fd, void *buf, size_t count) {
   preeny_debug("read\n");
-#ifdef KFS_ORIG
   return original_read(fd, buf, count);
-#else
-  return original_read(fd, buf, count);
-#endif
 }
 
 ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
-  preeny_debug("pread\n");
-#ifdef KFS_ORIG
   return original_pread(fd, buf, count, offset);
-#else
-  return original_pread(fd, buf, count, offset);
-#endif
 }
 
 ssize_t write(int fd, const void *buf, size_t count) {
   preeny_debug("write\n");
-#ifdef KFS_ORIG
   return original_write(fd, buf, count);
-#else
-  return original_write(fd, buf, count);
-#endif
 }
 
 ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
   preeny_debug("pwrite\n");
-#ifdef KFS_ORIG
   return original_pwrite(fd, buf, count, offset);
-#else
-  return 0;
-#endif
 }
 
 static void init_shm_keys(char *keys) {
