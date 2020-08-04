@@ -1,19 +1,19 @@
 #include "utest.h"
 
-       #include <sys/types.h>
-       #include <dirent.h>
-       #include <string.h>
-       #include <stdlib.h>
+#include <dirent.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
 
 const char *g_fsp_test_root_dir = "fsp/";
 int g_pass = 1;
 
 void print_pass() {
-    if (g_pass) {
-        fprintf(stdout, "PASS\n");
-    }else {
-        fprintf(stdout, "FAIL\n");
-    }
+  if (g_pass) {
+    fprintf(stdout, "PASS\n");
+  } else {
+    fprintf(stdout, "FAIL\n");
+  }
 }
 
 int walk_test_root_dir() {
@@ -34,6 +34,4 @@ int walk_test_root_dir() {
   return 0;
 }
 
-void print_sep_line()
-     { fprintf(stdout, "=======\n"); }
-
+void print_sep_line() { fprintf(stdout, "=======\n"); }
