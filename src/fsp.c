@@ -88,7 +88,7 @@ __attribute__((constructor)) void preeny_fsops_orig() {
     fsp_num_workers_str = "1";
   }
   init_shm_keys(fsp_num_workers_str);
-  preeny_info("g_num_workers:%d\n", g_num_workers);
+  preeny_info("FSP:g_num_workers:%d\n", g_num_workers);
 
   int rt = fs_init_multi(g_num_workers, shm_keys);
   if (rt < 0) {
@@ -200,21 +200,22 @@ struct dirent *readdir(DIR *dirp) {
 
 ssize_t read(int fd, void *buf, size_t count) {
   preeny_debug("read\n");
-  return original_read(fd, buf, count);
+  return fs_read(fd, buf, count);
 }
 
 ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
-  return original_pread(fd, buf, count, offset);
+  preeny_debug("pread\n");
+  return fs_pread(fd, buf, count, offset);
 }
 
 ssize_t write(int fd, const void *buf, size_t count) {
   preeny_debug("write\n");
-  return original_write(fd, buf, count);
+  return fs_write(fd, buf, count);
 }
 
 ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
   preeny_debug("pwrite\n");
-  return original_pwrite(fd, buf, count, offset);
+  return fs_pwrite(fd, buf, count, offset);
 }
 
 static void init_shm_keys(char *keys) {
