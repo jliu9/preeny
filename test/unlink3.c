@@ -95,6 +95,8 @@ RETRY_READ1:
     goto RETRY_READ1;
   }
   CHECK_ACTUAL_EXPECT_VALUE(readunlinked1, rt, test_str_len);
+  rt = stat(test_f1_name, &stbuf);
+  CHECK_ACTUAL_EXPECT_VALUE(statunlinkedf1_2, rt, -1);
   assert(g_pass);
 
   rt = unlink(test_f2_name);
@@ -111,7 +113,15 @@ RETRY_READ2:
     goto RETRY_READ2;
   }
   CHECK_ACTUAL_EXPECT_VALUE(readunlinked2, rt, test_str_len);
+  rt = stat(test_f2_name, &stbuf);
+  CHECK_ACTUAL_EXPECT_VALUE(statunlinkedf2_2, rt, -1);
   assert(g_pass);
+
+  // close files
+  rt = close(fd1);
+  CHECK_ACTUAL_EXPECT_VALUE(closef1, rt, 0);
+  rt = close(fd2);
+  CHECK_ACTUAL_EXPECT_VALUE(closef2, rt, 0);
 }
 
 int main() {
