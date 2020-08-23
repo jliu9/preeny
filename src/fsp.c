@@ -148,7 +148,7 @@ int unlink(const char *pathname) {
 }
 
 int rename(const char *oldpath, const char *newpath) {
-  preeny_debug("rename\n");
+  preeny_debug("rename old:%s new:%s\n", oldpath, newpath);
   int rt;
   if (check_if_path_fsp_data(oldpath)) {
     rt = fs_rename(TO_NEW_PATH(oldpath), TO_NEW_PATH(newpath));
