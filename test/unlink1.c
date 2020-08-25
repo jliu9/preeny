@@ -30,7 +30,8 @@ void test_ulink_0() {
   CHECK_ACTUAL_EXPECT_VALUE(mkdir, rt, 0);
 
   rt = stat(test_f1_name, &stbuf);
-  CHECK_ACTUAL_EXPECT_VALUE(statf1, rt, -1);
+  // CHECK_ACTUAL_EXPECT_VALUE(statf1, rt, -1);
+  CHECK_COND(statf1, rt < 0);
 
   fd = open(test_f1_name, O_CREAT, 0770);
   CHECK_COND(creatf1, fd > 0);

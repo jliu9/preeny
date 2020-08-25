@@ -13,21 +13,24 @@ TC_NAME="$1"
 KEY_NUM="$2"
 
 BIN_DIR="./bin/"
-TEST_DIR="./bin/fsp/test_dir/"
 
-if [ $KEY_NUM -lt 2 ]; then
-    EXPORT FSP_KEY_LISTS="1"
-else
-    EXPORT FSP_KEY_LISTS="1,11"
-fi
-
-if [ -f "${BIN_DIR}/${TC_NAME}" ]; then
-    echo "======= ${TC_NAME} ======="
-else
-    echo "${BIN_DIR}/${TC_NAME} not exists"
+if [ $# -ne 2 ]; then
+    echo "Usage: run_fstest.sh <TC_NAME> <KEY_NUM>"
     exit
 fi
 
-mkdir -p "${TEST_DIR}"
+
+if [ "$KEY_NUM" -lt 2 ]; then
+    export FSP_KEY_LISTS="1"
+else
+    export FSP_KEY_LISTS="1,11"
+fi
+
+if [ -f "${BIN_DIR}/test_${TC_NAME}" ]; then
+    echo "======= ${TC_NAME} ======="
+else
+    echo "${BIN_DIR}/test_${TC_NAME} not exists"
+    exit
+fi
 
 LD_PRELOAD=lib/libfsp.so ./bin/test_"$TC_NAME"

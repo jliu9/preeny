@@ -12,19 +12,22 @@
 extern char *g_fsp_test_root_dir;
 extern int g_pass;
 
-static const char *test_dir_name = "fsp/test_dir";
+static const char *test_dir_name_src = "fsp/tsrc";
+static const char *test_dir_name_dst = "fsp/tdst";
 static const mode_t common_mode = 0770;
 
 void setup() {
-  int rt = mkdir(test_dir_name, common_mode);
+  int rt = mkdir(test_dir_name_src, common_mode);
+  CHECK_ACTUAL_EXPECT_VALUE(mkdsetup, rt, 0);
+  rt = mkdir(test_dir_name_dst, common_mode);
   CHECK_ACTUAL_EXPECT_VALUE(mkdsetup, rt, 0);
   assert(g_pass);
 }
 
 // src is FILE, dst does not exist
 void test_rename1() {
-  char *test_src_name = "fsp/test_dir/fsrc1";
-  char *test_dst_name = "fsp/test_dir/fdst1";
+  char *test_src_name = "fsp/tsrc/fsrc1";
+  char *test_dst_name = "fsp/tdst/fdst1";
   int rt, fd;
   struct stat stbuf;
   ino_t src_ino, dst_ino;
@@ -55,8 +58,8 @@ void test_rename1() {
 
 // src is DIR, dst does not exist
 void test_rename2() {
-  char *test_src_name = "fsp/test_dir/dsrc2";
-  char *test_dst_name = "fsp/test_dir/ddst2";
+  char *test_src_name = "fsp/tsrc/dsrc2";
+  char *test_dst_name = "fsp/tdst/ddst2";
   int rt;
   struct stat stbuf;
   ino_t src_ino, dst_ino;
@@ -86,8 +89,8 @@ void test_rename2() {
 
 // src, dist are FILEs, both exists
 void test_rename3() {
-  char *test_src_name = "fsp/test_dir/fsrc3";
-  char *test_dst_name = "fsp/test_dir/fdst3";
+  char *test_src_name = "fsp/tsrc/fsrc3";
+  char *test_dst_name = "fsp/tdst/fdst3";
   int rt, fd;
   struct stat stbuf;
   ino_t src_ino, dst_ino;
@@ -123,8 +126,8 @@ void test_rename3() {
 
 // src, dst are DIRs, both exists
 void test_rename4() {
-  char *test_src_name = "fsp/test_dir/dsrc4";
-  char *test_dst_name = "fsp/test_dir/ddst4";
+  char *test_src_name = "fsp/tsrc/dsrc4";
+  char *test_dst_name = "fsp/tdst/ddst4";
   int rt;
   struct stat stbuf;
   ino_t src_ino, dst_ino;
@@ -179,7 +182,7 @@ int main() {
   print_sep_line();
 
   print_sep_line();
-  test_rename1();
+  test_rename4();
   print_pass();
   print_sep_line();
 

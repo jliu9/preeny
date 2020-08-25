@@ -118,6 +118,7 @@ add_executable(test_unlink1 test/unlink1.c ${FSP_TEST_COMMON_SRC})
 add_executable(test_unlink2 test/unlink2.c ${FSP_TEST_COMMON_SRC})
 add_executable(test_unlink3 test/unlink3.c ${FSP_TEST_COMMON_SRC})
 add_executable(test_rename1 test/rename1.c ${FSP_TEST_COMMON_SRC})
+add_executable(test_rename2 test/rename2.c ${FSP_TEST_COMMON_SRC})
 
 # Scripts
 file(COPY ${CMAKE_SOURCE_DIR}/test/run_tests.sh DESTINATION ${CMAKE_BINARY_DIR})
