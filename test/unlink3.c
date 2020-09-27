@@ -40,6 +40,7 @@ void test_unlink_1() {
   const char *test_str = "helloworld";
   int test_str_len = (int)strlen(test_str);
   fd = open(test_f1_name, O_CREAT | O_RDWR, 0770);
+  fprintf(stdout, "fd:%d\n", fd);
   CHECK_COND(creatf1, fd > 0);
 RETRY_WRITE1:
   rt = write(fd, test_str, strlen(test_str));
@@ -51,6 +52,7 @@ RETRY_WRITE1:
   CHECK_ACTUAL_EXPECT_VALUE(closef1, rt, 0);
   assert(g_pass);
   fd = open(test_f2_name, O_CREAT | O_RDWR, 0770);
+  fprintf(stdout, "fd:%d\n", fd);
 RETRY_WRITE2:
   rt = write(fd, test_str, strlen(test_str));
   if (rt == FSP_MT_RETRY_ERROR_NUM) {
@@ -73,12 +75,11 @@ RETRY_WRITE2:
 
   int fd1, fd2;
   // now we open files again
-  fd = open(test_f1_name, O_RDONLY, 0770);
-  CHECK_COND(openf1, fd > 0);
-  fd1 = fd;
-  fd = open(test_f2_name, O_RDONLY, 0770);
-  CHECK_COND(openf2, fd > 0);
-  fd2 = fd;
+  fd1 = open(test_f1_name, O_RDONLY, 0770);
+  CHECK_COND(openf1, fd1 > 0);
+  fd2 = open(test_f2_name, O_RDONLY, 0770);
+  CHECK_COND(openf2, fd2 > 0);
+  fprintf(stdout, "fd1:%d fd2:%d\n", fd1, fd2);
   assert(g_pass);
 
   rt = unlink(test_f1_name);
@@ -108,7 +109,7 @@ RETRY_READ1:
   // read again
   char buf2[100];
 RETRY_READ2:
-  rt = pread(fd1, buf2, test_str_len, 0);
+  rt = pread(fd2, buf2, test_str_len, 0);
   if (rt == FSP_MT_RETRY_ERROR_NUM) {
     goto RETRY_READ2;
   }
@@ -118,10 +119,12 @@ RETRY_READ2:
   assert(g_pass);
 
   // close files
+  fprintf(stdout, "fd1:%d fd2:%d\n", fd1, fd2);
   rt = close(fd1);
   CHECK_ACTUAL_EXPECT_VALUE(closef1, rt, 0);
   rt = close(fd2);
   CHECK_ACTUAL_EXPECT_VALUE(closef2, rt, 0);
+  assert(g_pass);
 }
 
 int main() {
