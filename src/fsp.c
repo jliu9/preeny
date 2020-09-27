@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 
+#include <assert.h>
 #include <dirent.h>
 #include <dlfcn.h>
 #include <stdlib.h>
@@ -13,6 +14,8 @@
 
 #define FS_SHM_KEY_BASE 20190301
 #define FS_MAX_NUM_WORKER 20
+#define FSP_FD_START_VAL 10000
+#define IS_FD_IN_FSP(fd) (fd >= FSP_FD_START_VAL)
 
 const static char *fsp_dir_prefix = "fsp";
 // 3 == strlen(fsp_dir_prefix)
@@ -134,15 +137,18 @@ int open(const char *pathname, int flags, mode_t mode) {
 
 int close(int fd) {
   preeny_debug("close\n");
-  return fs_close(fd);
+  if (IS_FD_IN_FSP(fd)) {
+    return fs_close(fd);
+  }
+  return original_close(fd);
 }
 int unlink(const char *pathname) {
-  preeny_debug("unlink\n");
+  preeny_debug("unlink %s\n", pathname);
   int rt;
   if (check_if_path_fsp_data(pathname)) {
     rt = fs_unlink(TO_NEW_PATH(pathname));
   } else {
-    rt = unlink(pathname);
+    rt = original_unlink(pathname);
   }
   return rt;
 }
@@ -153,18 +159,18 @@ int rename(const char *oldpath, const char *newpath) {
   if (check_if_path_fsp_data(oldpath)) {
     rt = fs_rename(TO_NEW_PATH(oldpath), TO_NEW_PATH(newpath));
   } else {
-    rt = rename(oldpath, newpath);
+    rt = original_rename(oldpath, newpath);
   }
   return rt;
 }
 
 int mkdir(const char *pathname, mode_t mode) {
-  preeny_debug("mkdir\n");
+  preeny_debug("mkdir pathname:%s\n", pathname);
   int rt;
   if (check_if_path_fsp_data(pathname)) {
     rt = fs_mkdir(TO_NEW_PATH(pathname), mode);
   } else {
-    rt = mkdir(pathname, mode);
+    rt = original_mkdir(pathname, mode);
   }
   return rt;
 }
@@ -199,23 +205,63 @@ struct dirent *readdir(DIR *dirp) {
 }
 
 ssize_t read(int fd, void *buf, size_t count) {
-  preeny_debug("read\n");
-  return fs_read(fd, buf, count);
+  // preeny_debug("read\n");
+  if (IS_FD_IN_FSP(fd)) {
+    ssize_t ret;
+    void *cur_buf = fs_malloc(count);
+    assert(cur_buf != NULL);
+    ret = fs_allocated_read(fd, cur_buf, count);
+    if (ret >= 0) {
+      memcpy(buf, cur_buf, ret);
+    }
+    fs_free(cur_buf);
+    return ret;
+  }
+  return original_read(fd, buf, count);
 }
 
 ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
   preeny_debug("pread\n");
-  return fs_pread(fd, buf, count, offset);
+  if (IS_FD_IN_FSP(fd)) {
+    ssize_t ret;
+    void *cur_buf = fs_malloc(count);
+    assert(cur_buf != NULL);
+    ret = fs_allocated_pread(fd, cur_buf, count, offset);
+    if (ret >= 0) {
+      memcpy(buf, cur_buf, ret);
+    }
+    fs_free(cur_buf);
+    return ret;
+  }
+  return original_pread(fd, buf, count, offset);
 }
 
 ssize_t write(int fd, const void *buf, size_t count) {
-  preeny_debug("write\n");
-  return fs_write(fd, buf, count);
+  // preeny_debug("write fd:%d\n", fd);
+  if (IS_FD_IN_FSP(fd)) {
+    ssize_t ret;
+    void *cur_buf = fs_malloc(count);
+    assert(cur_buf != NULL);
+    memcpy(cur_buf, buf, count);
+    ret = fs_allocated_write(fd, cur_buf, count);
+    fs_free(cur_buf);
+    return ret;
+  }
+  return original_write(fd, buf, count);
 }
 
 ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset) {
   preeny_debug("pwrite\n");
-  return fs_pwrite(fd, buf, count, offset);
+  if (IS_FD_IN_FSP(fd)) {
+    ssize_t ret;
+    void *cur_buf = fs_malloc(count);
+    assert(cur_buf != NULL);
+    memcpy(cur_buf, buf, count);
+    ret = fs_allocated_pwrite(fd, cur_buf, count, offset);
+    fs_free(cur_buf);
+    return ret;
+  }
+  return original_pwrite(fd, buf, count, offset);
 }
 
 static void init_shm_keys(char *keys) {

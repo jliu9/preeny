@@ -117,9 +117,12 @@ set(FSP_TEST_COMMON_SRC test/fsptest_common.c test/utest.h)
 add_executable(test_unlink1 test/unlink1.c ${FSP_TEST_COMMON_SRC})
 add_executable(test_unlink2 test/unlink2.c ${FSP_TEST_COMMON_SRC})
 add_executable(test_unlink3 test/unlink3.c ${FSP_TEST_COMMON_SRC})
+add_executable(test_unlink4 test/unlink4.c ${FSP_TEST_COMMON_SRC})
 add_executable(test_rename1 test/rename1.c ${FSP_TEST_COMMON_SRC})
 add_executable(test_rename2 test/rename2.c ${FSP_TEST_COMMON_SRC})
+add_executable(dcpdir test/deepcopydir.c ${FSP_TEST_COMMON_SRC})
 
 # Scripts
 file(COPY ${CMAKE_SOURCE_DIR}/test/run_tests.sh DESTINATION ${CMAKE_BINARY_DIR})
 file(COPY ${CMAKE_SOURCE_DIR}/test/run_fsptest.sh DESTINATION ${CMAKE_BINARY_DIR})
+file(COPY ${CMAKE_SOURCE_DIR}/test/run_dcpdir.sh DESTINATION ${CMAKE_BINARY_DIR})
