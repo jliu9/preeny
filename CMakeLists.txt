@@ -1,5 +1,5 @@
-cmake_minimum_required (VERSION 2.6)
-project (Preeny)
+cmake_minimum_required(VERSION 2.6)
+project(Preeny)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -45,8 +45,18 @@ link_directories(
 )
 
 add_library(fsp SHARED src/fsp.c)
-#target_compile_definitions(fsp PRIVATE KFS_ORIG)
-target_link_libraries(fsp common-preeny dl cfs rt stdc++ tbb iberty)
+# target_compile_definitions(fsp PRIVATE KFS_ORIG)
+target_link_libraries(
+  fsp
+  common-preeny
+  dl
+  cfs
+  rt
+  stdc++
+  tbb
+  tbbmalloc
+  iberty)
+
 
 # Signals
 add_library(dealarm SHARED src/dealarm.c)
@@ -124,5 +134,7 @@ add_executable(dcpdir test/deepcopydir.c ${FSP_TEST_COMMON_SRC})
 
 # Scripts
 file(COPY ${CMAKE_SOURCE_DIR}/test/run_tests.sh DESTINATION ${CMAKE_BINARY_DIR})
-file(COPY ${CMAKE_SOURCE_DIR}/test/run_fsptest.sh DESTINATION ${CMAKE_BINARY_DIR})
-file(COPY ${CMAKE_SOURCE_DIR}/test/run_dcpdir.sh DESTINATION ${CMAKE_BINARY_DIR})
+file(COPY ${CMAKE_SOURCE_DIR}/test/run_fsptest.sh
+     DESTINATION ${CMAKE_BINARY_DIR})
+file(COPY ${CMAKE_SOURCE_DIR}/test/run_dcpdir.sh
+     DESTINATION ${CMAKE_BINARY_DIR})

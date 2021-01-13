@@ -56,6 +56,8 @@ static inline int check_if_path_fsp_data(const char *path) {
 //
 int (*original_stat)(const char *pathname, struct stat *statbuf);
 int (*original__xstat)(int ver, const char *path, struct stat *stat_buf);
+int (*original_stat64)(const char *pathname, struct stat64 *statbuf);
+int (*original__xstat64)(int ver, const char *path, struct stat64 *stat_buf);
 int (*original_open)(const char *pathname, int flags, mode_t mode);
 int (*original_close)(int fd);
 int (*original_unlink)(const char *pathname);
@@ -72,6 +74,8 @@ ssize_t (*original_pwrite)(int fd, const void *buf, size_t count, off_t offset);
 __attribute__((constructor)) void preeny_fsops_orig() {
   original_stat = dlsym(RTLD_NEXT, "stat");
   original__xstat = dlsym(RTLD_NEXT, "__xstat");
+  original_stat64 = dlsym(RTLD_NEXT, "stat64");
+  original__xstat64 = dlsym(RTLD_NEXT, "__xstat64");
   original_open = dlsym(RTLD_NEXT, "open");
   original_close = dlsym(RTLD_NEXT, "close");
   original_unlink = dlsym(RTLD_NEXT, "unlink");
@@ -119,6 +123,28 @@ int __xstat(int ver, const char *path, struct stat *statbuf) {
     rt = fs_stat(TO_NEW_PATH(path), statbuf);
   } else {
     rt = original__xstat(ver, path, statbuf);
+  }
+  return rt;
+}
+
+int stat64(const char *path, struct stat64 *statbuf) {
+  preeny_debug("__stat64(%s)\n", path);
+  int rt;
+  if (check_if_path_fsp_data(path)) {
+    rt = fs_stat(TO_NEW_PATH(path), (struct stat *)statbuf);
+  } else {
+    rt = original_stat64(path, statbuf);
+  }
+  return rt;
+}
+
+int __xstat64(int ver, const char *path, struct stat64 *statbuf) {
+  preeny_debug("__xstat64(%s)\n", path);
+  int rt;
+  if (check_if_path_fsp_data(path)) {
+    rt = fs_stat(TO_NEW_PATH(path), (struct stat *)statbuf);
+  } else {
+    rt = original__xstat64(ver, path, statbuf);
   }
   return rt;
 }
@@ -187,7 +213,7 @@ int rmdir(const char *pathname) {
 }
 
 DIR *opendir(const char *name) {
-  preeny_debug("opendir\n");
+  preeny_debug("opendir name:%s\n", name);
   if (check_if_path_fsp_data(name)) {
     return (DIR *)(fs_opendir(TO_NEW_PATH(name)));
   }
@@ -221,16 +247,19 @@ ssize_t read(int fd, void *buf, size_t count) {
 }
 
 ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
-  preeny_debug("pread\n");
+  preeny_debug("pread fd:%d count:%lu off:%ld\n", fd, count, offset);
   if (IS_FD_IN_FSP(fd)) {
     ssize_t ret;
     void *cur_buf = fs_malloc(count);
+    // void *cur_buf = fs_malloc_pad(count);
     assert(cur_buf != NULL);
     ret = fs_allocated_pread(fd, cur_buf, count, offset);
+    // ret = fs_cpc_pread(fd, cur_buf, count, offset);
     if (ret >= 0) {
       memcpy(buf, cur_buf, ret);
     }
     fs_free(cur_buf);
+    // fs_free_pad(cur_buf);
     return ret;
   }
   return original_pread(fd, buf, count, offset);
