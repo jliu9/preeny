@@ -76,7 +76,7 @@ void test_write_unlink2() {
 
   // create files
   const int kBufSize = 4096;
-  const int kNumFiles = 3;
+  const int kNumFiles = 100;
   const uint64_t kFbytes = ((uint64_t)1024) * 100 * 1024;
   // const uint64_t kFbytes = ((uint64_t)1024) * 12;
   // const uint64_t kFbytes = ((uint64_t)1024) * 16;
@@ -96,6 +96,7 @@ void test_write_unlink2() {
     CHECK_ACTUAL_EXPECT_VALUE(closef, rt, 0);
     assert(g_pass);
   }
+
   for (int fi = 0; fi < kNumFiles; fi++) {
     sprintf(cur_fname, "fsp/test_dir/f%d", fi);
     rt = unlink(cur_fname);

@@ -56,24 +56,30 @@ int stupid_grep(const char *dir_name, const char *target) {
     assert(rt >= 0);
     size_t fsize = stbuf.st_size;
     int ffd = open(fsp_file_name, O_RDONLY);
-    const int kReadSz = 4096;
+    const int kReadSz = 8000;
     char readBuf[kReadSz];
     ssize_t rsize = 0;
+    off_t i = 0;
     while (1) {
-      rt = read(ffd, readBuf, kReadSz);
+      int cur_count = kReadSz;
+      // rt = pread(ffd, readBuf, cur_count, i * kReadSz);
+      rt = read(ffd, readBuf, cur_count);
       if (rt >= 0) {
         write(kfd, readBuf, rt);
         rsize += rt;
       }
-      if (rt != kReadSz) {
+      if (rt != cur_count) {
+        fprintf(stderr, "rt:%d cur_count:%d\n", rt, cur_count);
         fsync(kfd);
         break;
       }
+      i++;
     }
     if (rsize != fsize) {
       fprintf(stderr, "rsize:%ld fsize:%ld\n", rsize, fsize);
       assert(0);
     }
+    close(ffd);
   }
   closedir(dirp);
   return rt;
