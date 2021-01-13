@@ -101,6 +101,8 @@ __attribute__((constructor)) void preeny_fsops_orig() {
   if (rt < 0) {
     preeny_error("cannot connect to FS\n");
   }
+  volatile void *ptr = fs_malloc(1024);
+  fs_free((void *)ptr);
 }
 
 __attribute__((destructor)) void preeny_fsops_shutdown() { clean_exit(); }
